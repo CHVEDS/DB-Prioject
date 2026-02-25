@@ -1,37 +1,33 @@
 ```
-# Python
-__pycache__/
+# Compiled Python files
 *.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-.venv/
-pip-log.txt
-pip-delete-this-directory.txt
+__pycache__/
 
-# Dependencies
-requirements.txt.bak
-
-# Logs
+# Logs and temporary files
 *.log
+*.tmp
+*.swp
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Editor
-.vscode/
-.idea/
-
-# Local configuration
+# Environment files
 .env
 .env.local
 *.env.*
+
+# Editors/IDE
+.vscode/
+.idea/
+
+# Coverage reports
+.coverage
+coverage/
+htmlcov/
+
+# Python specific
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
 ```
