@@ -169,6 +169,68 @@ def display_results(calculator: BankingRatiosCalculator, financial_data: Dict, t
     else:
         st.info("Не удалось извлечь ключевые статьи баланса")
     
+    # Digital banking indicators section
+    st.subheader("📱 Показатели цифрового банкинга")
+    
+    digital_indicators = {
+        "number_corporate_online_banking_customers": "Количество корпоративных клиентов онлайн-банкинга",
+        "number_personal_online_banking_customers": "Количество частных клиентов онлайн-банкинга",
+        "number_mobile_banking_customers": "Количество пользователей мобильного банкинга",
+        "number_telephone_banking_customers": "Количество клиентов телефонного банкинга",
+        "monthly_active_mobile_banking_customers": "Количество активных пользователей мобильного банка в месяц",
+        "ebanking_transaction_volume": "Объем электронных транзакций",
+        "customer_satisfaction_level": "Уровень удовлетворенности клиентов",
+        "ebanking_substitution_ratio": "Доля электронных каналов в общем количестве операций"
+    }
+    
+    digital_data = []
+    for key, label in digital_indicators.items():
+        if key in financial_data:
+            value = financial_data[key]
+            digital_data.append({
+                "Показатель": label,
+                "Значение": f"{value:,.0f}" if isinstance(value, (int, float)) and not pd.isna(value) else "N/A"
+            })
+    
+    if digital_data:
+        df_digital = pd.DataFrame(digital_data)
+        st.dataframe(df_digital, use_container_width=True, hide_index=True)
+    else:
+        st.info("Не удалось извлечь показатели цифрового банкинга")
+    
+    # Financial performance indicators section
+    st.subheader("💼 Финансовые показатели эффективности")
+    
+    financial_performance = {
+        "operating_income": "Операционный доход (млн руб.)",
+        "operating_profit": "Операционная прибыль (млн руб.)",
+        "profit_for_the_year": "Прибыль за год (млн руб.)",
+        "eps_basic": "EPS (базовая)",
+        "roa": "ROA (%)",
+        "roe": "ROE (%)",
+        "net_interest_margin": "Чистая процентная маржа (%)",
+        "cost_to_income_ratio": "Соотношение расходов к доходам (%)",
+        "non_interest_income_ratio": "Доля прочих доходов в операционных доходах (%)",
+        "credit_cost": "Кредитные издержки (%)",
+        "non_performing_loan_ratio": "Доля просроченных кредитов (%)",
+        "loan_loss_provision_coverage": "Покрытие просроченных кредитов резервами (%)"
+    }
+    
+    performance_data = []
+    for key, label in financial_performance.items():
+        if key in financial_data:
+            value = financial_data[key]
+            performance_data.append({
+                "Показатель": label,
+                "Значение": f"{value:,.2f}" if isinstance(value, (int, float)) and not pd.isna(value) else "N/A"
+            })
+    
+    if performance_data:
+        df_performance = pd.DataFrame(performance_data)
+        st.dataframe(df_performance, use_container_width=True, hide_index=True)
+    else:
+        st.info("Не удалось извлечь финансовые показатели эффективности")
+    
     # Calculated ratios section
     st.subheader("📈 Рассчитанные коэффициенты устойчивости")
     
@@ -222,7 +284,7 @@ def display_results(calculator: BankingRatiosCalculator, financial_data: Dict, t
     # Download buttons
     st.subheader("📥 Скачать результаты")
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         # Download detailed report as text
@@ -244,6 +306,12 @@ def display_results(calculator: BankingRatiosCalculator, financial_data: Dict, t
                 file_name="bank_ratios.csv",
                 mime="text/csv"
             )
+    
+    with col3:
+        # Add finish button
+        if st.button("Завершить работу"):
+            st.balloons()
+            st.success("Анализ успешно завершен!")
 
 
 if __name__ == "__main__":
