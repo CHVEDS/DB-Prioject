@@ -1,5 +1,5 @@
 streamlit>=1.28.0
-mineru>=2.0.9
+magic-pdf==0.6.0
 pandas>=2.0.0
 numpy>=1.24.0
 beautifulsoup4>=4.12.0
