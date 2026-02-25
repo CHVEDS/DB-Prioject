@@ -244,14 +244,16 @@ def parse_pdf_with_mineru(pdf_path: str) -> Dict[str, pd.DataFrame]:
                 'format': ['markdown'],
                 'model_cfg': None,
                 'table_config': None,
-                'device': 'cpu',
-                'pdf_file_names': [os.path.basename(pdf_path)],
-                'pdf_bytes_list': [Path(pdf_path).read_bytes()],
-                'p_lang_list': ['ru']  # Set language to Russian for bank reports
+                'device': 'cpu'
             })()
             
-            # Parse the PDF
-            do_parse(args)
+            # Parse the PDF - passing the required arguments directly to do_parse
+            do_parse(
+                args,
+                pdf_file_names=[os.path.basename(pdf_path)],
+                pdf_bytes_list=[Path(pdf_path).read_bytes()],
+                p_lang_list=['ru']  # Set language to Russian for bank reports
+            )
             
             # Read the generated markdown file
             md_files = list(Path(temp_dir).glob("*.md"))
