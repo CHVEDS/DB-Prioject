@@ -1,7 +1,7 @@
 """
-Parser module for extracting financial data from bank reports.
+Parser module for extracting financial data from bank reports using Magic-PDF.
 
-This module handles PDF parsing using MinerU and extracts structured
+This module handles PDF parsing using Magic-PDF and extracts structured
 data from balance sheets and income statements.
 """
 
@@ -49,7 +49,7 @@ def extract_bank_tables(markdown_content: str) -> Dict[str, pd.DataFrame]:
     Extract tables from markdown content representing bank financial statements.
 
     Args:
-        markdown_content: Content extracted from PDF using MinerU
+        markdown_content: Content extracted from PDF using Magic-PDF
 
     Returns:
         Dictionary of DataFrames with identified financial statement tables
@@ -244,7 +244,6 @@ def extract_named_indicators(section: str) -> Dict[str, float]:
             # Case-insensitive search for the pattern
             escaped_pattern = re.escape(pattern)
             # Look for the pattern followed by a number or at the end of a sentence/table row
-            # Include possibility of + or - signs before the number
             regex = rf'{escaped_pattern}[^\d]*?([+-]?\d[\d\s\.,]*)'
             matches = re.findall(regex, section, re.IGNORECASE)
             
@@ -260,7 +259,6 @@ def extract_named_indicators(section: str) -> Dict[str, float]:
             # Case-insensitive search for the pattern
             escaped_pattern = re.escape(pattern)
             # Look for the pattern followed by a number or at the end of a sentence/table row
-            # Include possibility of + or - signs before the number
             regex = rf'{escaped_pattern}[^\d]*?([+-]?\d[\d\s\.,]*)'
             matches = re.findall(regex, section, re.IGNORECASE)
             
@@ -269,12 +267,12 @@ def extract_named_indicators(section: str) -> Dict[str, float]:
                 if amount is not None:
                     indicators[indicator_name] = amount
                     break  # Only take the first match for this pattern
-
+    
     # Additional search for indicators in table format (pattern: indicator name followed by value in adjacent cells)
     # Look for common table separators and structures
-    table_patterns = r'([A-Za-zА-Яа-я\s\(\)]+?)\s*[:\-|\t]\s*([+-]?\d[\d\s\.,]*)'
+    table_patterns = r'([A-Za-zА-Яа-я\s\(\)]+?)\s*[:\-\|\t]\s*([+-]?\d[\d\s\.,]*)'
     table_matches = re.findall(table_patterns, section)
-
+    
     for name_part, value_part in table_matches:
         # Check if name part matches any of our indicators
         for indicator_name, patterns in {**DIGITAL_BANKING_INDICATORS, **FINANCIAL_PERFORMANCE_INDICATORS}.items():
@@ -284,13 +282,13 @@ def extract_named_indicators(section: str) -> Dict[str, float]:
                     if amount is not None:
                         indicators[indicator_name] = amount
                         break
-
+    
     return indicators
 
 
-def parse_pdf_with_mineru(pdf_path: str) -> Dict[str, pd.DataFrame]:
+def parse_pdf_with_magic_pdf(pdf_path: str) -> Dict[str, pd.DataFrame]:
     """
-    Parse PDF file using MinerU and extract financial tables.
+    Parse PDF file using Magic-PDF and extract financial tables.
 
     Args:
         pdf_path: Path to the PDF file to parse
@@ -299,92 +297,49 @@ def parse_pdf_with_mineru(pdf_path: str) -> Dict[str, pd.DataFrame]:
         Dictionary of DataFrames containing parsed financial data
     """
     try:
-        # Import here to avoid issues if mineru is not installed
-        from mineru.api import read_pdf
-        import os
+        # Import here to avoid issues if magic-pdf is not installed
+        from magic_pdf.rw.AbsReaderWriter import AbsReaderWriter
+        from magic_pdf.rw.DiskReaderWriter import DiskReaderWriter
+        from magic_pdf.pdf_parse_by_mmd import parse_pdf_by_mmd
+        import json
+        
+        # Create temporary directory for output
+        with tempfile.TemporaryDirectory() as temp_dir:
+            reader_writer = DiskReaderWriter(temp_dir)
+            
+            # Read the PDF file
+            pdf_bytes = Path(pdf_path).read_bytes()
+            
+            # Parse the PDF using Magic-PDF
+            pdf_info = parse_pdf_by_mmd(
+                pdf_bytes,
+                parse_mode="auto",
+                ocr_options_dict={},
+                force_ocr=False,
+                is_debug=False,
+                debug_able=False
+            )
+            
+            # Convert to markdown format
+            markdown_content = pdf_info.get('mmd', '')
+            if not markdown_content:
+                # If mmd is empty, try to get text content
+                markdown_content = pdf_info.get('text', '')
+                
+            # If still empty, try to get the full content
+            if not markdown_content:
+                markdown_content = str(pdf_info)
 
-        # Parse the PDF using MinerU API
-        pdf_structure = read_pdf(
-            pdf_path=pdf_path,
-            model_list=['layout', 'formula'],
-            ocr=False,
-            start_page=0,
-            end_page=None,
-            thread_num=1
-        )
+            # Extract tables from markdown content
+            tables = extract_bank_tables(markdown_content)
 
-        # Convert structure to markdown content
-        markdown_content = ""
-        for element in pdf_structure:
-            if element.get('type') == 'text':
-                markdown_content += element.get('content', '') + "\n"
-            elif element.get('type') == 'table':
-                # Convert table to markdown format
-                table_data = element.get('content', [])
-                if table_data:
-                    markdown_content += "\n| "
-                    # Add header row if present
-                    if table_data[0]:
-                        markdown_content += " | ".join(str(cell) for cell in table_data[0]) + " |\n"
-                        markdown_content += "| " + " | ".join("---" for _ in table_data[0]) + " |\n"
-                    # Add remaining rows
-                    for row in table_data[1:]:
-                        if row:
-                            markdown_content += "| " + " | ".join(str(cell) for cell in row) + " |\n"
-                    markdown_content += "\n"
-
-        # Extract tables from markdown content
-        tables = extract_bank_tables(markdown_content)
-
-        return tables
+            return tables
 
     except ImportError:
-        logger.error("MinerU library not found. Please install it using 'pip install mineru'")
+        logger.error("Magic-PDF library not found. Please install it using 'pip install magic-pdf'")
         return {}
     except Exception as e:
-        logger.error(f"Error parsing PDF with MinerU: {str(e)}")
-        # Try alternative approach if primary method fails
-        return try_alternative_parsing(pdf_path)
-
-
-def try_alternative_parsing(pdf_path: str) -> Dict[str, pd.DataFrame]:
-    """
-    Alternative PDF parsing approach when MinerU fails.
-
-    Args:
-        pdf_path: Path to the PDF file to parse
-
-    Returns:
-        Dictionary of DataFrames containing parsed financial data
-    """
-    try:
-        import fitz  # PyMuPDF
-        
-        # Open the PDF file
-        doc = fitz.open(pdf_path)
-        text_content = ""
-        
-        # Extract text from all pages
-        for page in doc:
-            text_content += page.get_text()
-        
-        doc.close()
-        
-        # Create a mock structure similar to what extract_bank_tables expects
-        # Convert the text content to a format that can be processed
-        soup = BeautifulSoup(text_content, 'html.parser')
-        clean_text = soup.get_text()
-        
-        # Extract tables from text content
-        tables = extract_bank_tables(clean_text)
-        
-        return tables
-        
-    except ImportError:
-        logger.error("PyMuPDF library not found. Please install it using 'pip install PyMuPDF'")
-        return {}
-    except Exception as e:
-        logger.error(f"Error in alternative PDF parsing: {str(e)}")
+        logger.error(f"Error parsing PDF with Magic-PDF: {str(e)}")
         return {}
 
 
