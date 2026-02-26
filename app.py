@@ -42,11 +42,15 @@ def main():
     """)
     
     # File uploader
-    uploaded_file = st.file_uploader(
-        "Выберите PDF-файл годового отчета банка",
+    uploaded_files = st.file_uploader(
+        "Выберите PDF-файл(ы) годового отчета банка",
         type=["pdf"],
+        accept_multiple_files=True,
         help="Поддерживаются только PDF файлы годовых отчетов банков"
     )
+    
+    # Use the first file if multiple are uploaded
+    uploaded_file = uploaded_files[0] if uploaded_files else None
     
     if uploaded_file is not None:
         st.success(f"Файл загружен: {uploaded_file.name}")
@@ -312,6 +316,7 @@ def display_results(calculator: BankingRatiosCalculator, financial_data: Dict, t
         if st.button("Завершить работу"):
             st.balloons()
             st.success("Анализ успешно завершен!")
+            st.stop()
 
 
 if __name__ == "__main__":
