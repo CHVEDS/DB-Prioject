@@ -14,7 +14,7 @@ from typing import Dict, Optional
 import tempfile
 
 from config import SUPPORTED_FORMATS
-from parser import parse_pdf_with_mineru, aggregate_financial_data
+from magic_pdf_parser import parse_pdf_with_magic_pdf, aggregate_financial_data
 from calculator import BankingRatiosCalculator, generate_analysis_report
 
 
@@ -66,7 +66,7 @@ def main():
                 with st.spinner("Идет анализ отчета... Это может занять несколько минут."):
                     
                     # Parse the PDF
-                    tables = parse_pdf_with_mineru(temp_path)
+                    tables = parse_pdf_with_magic_pdf(temp_path)
                     
                     if not tables:
                         st.error("Не удалось извлечь финансовые данные из загруженного файла. "

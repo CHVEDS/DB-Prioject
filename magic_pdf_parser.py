@@ -298,49 +298,40 @@ def parse_pdf_with_magic_pdf(pdf_path: str) -> Dict[str, pd.DataFrame]:
     """
     try:
         # Import here to avoid issues if magic-pdf is not installed
-        from magic_pdf.rw.AbsReaderWriter import AbsReaderWriter
-        from magic_pdf.rw.DiskReaderWriter import DiskReaderWriter
-        from magic_pdf.pdf_parse_by_mmd import parse_pdf_by_mmd
+        from magic_pdf.pdf_parse_interface import parse_pdf_by_method
         import json
         
-        # Create temporary directory for output
-        with tempfile.TemporaryDirectory() as temp_dir:
-            reader_writer = DiskReaderWriter(temp_dir)
+        # Read the PDF file
+        pdf_bytes = Path(pdf_path).read_bytes()
+        
+        # Parse the PDF using Magic-PDF
+        pdf_info = parse_pdf_by_method(
+            pdf_bytes,
+            method="auto"
+        )
+        
+        # Convert to markdown format
+        markdown_content = pdf_info.get('mmd', '')
+        if not markdown_content:
+            # If mmd is empty, try to get text content
+            markdown_content = pdf_info.get('text', '')
             
-            # Read the PDF file
-            pdf_bytes = Path(pdf_path).read_bytes()
-            
-            # Parse the PDF using Magic-PDF
-            pdf_info = parse_pdf_by_mmd(
-                pdf_bytes,
-                parse_mode="auto",
-                ocr_options_dict={},
-                force_ocr=False,
-                is_debug=False,
-                debug_able=False
-            )
-            
-            # Convert to markdown format
-            markdown_content = pdf_info.get('mmd', '')
-            if not markdown_content:
-                # If mmd is empty, try to get text content
-                markdown_content = pdf_info.get('text', '')
-                
-            # If still empty, try to get the full content
-            if not markdown_content:
-                markdown_content = str(pdf_info)
+        # If still empty, try to get the full content
+        if not markdown_content:
+            markdown_content = str(pdf_info)
 
-            # Extract tables from markdown content
-            tables = extract_bank_tables(markdown_content)
+        # Extract tables from markdown content
+        tables = extract_bank_tables(markdown_content)
 
-            return tables
+        return tables
 
     except ImportError:
         logger.error("Magic-PDF library not found. Please install it using 'pip install magic-pdf'")
         return {}
     except Exception as e:
         logger.error(f"Error parsing PDF with Magic-PDF: {str(e)}")
-        return {}
+        # Try alternative approach if primary method fails
+        return try_alternative_parsing(pdf_path)
 
 
 def aggregate_financial_data(tables: Dict[str, pd.DataFrame]) -> Dict[str, float]:
