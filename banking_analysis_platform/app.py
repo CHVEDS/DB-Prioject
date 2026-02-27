@@ -8,14 +8,14 @@ from typing import Dict, Optional
 import tempfile
 
 # Import modules from our package
-from banking_analysis_platform.core.pdf_processor import extract_tables_from_pdf
-from banking_analysis_platform.core.metadata_extractor import extract_metadata
-from banking_analysis_platform.core.data_aggregator import aggregate_financial_data
-from banking_analysis_platform.core.export_manager import ReportExportManager
-from banking_analysis_platform.analytics.calculator import BankingRatiosCalculator, generate_analysis_report
-from banking_analysis_platform.analytics.bsi import calculate_bsi
-from banking_analysis_platform.config.styles import CSS_STYLES, APP_TITLE, APP_SUBTITLE, COLOR_SCHEME
-from banking_analysis_platform.utils.logging_config import logger
+from core.pdf_processor import extract_tables_from_pdf
+from core.metadata_extractor import extract_metadata
+from core.data_aggregator import aggregate_financial_data
+from core.export_manager import ReportExportManager
+from analytics.calculator import BankingRatiosCalculator, generate_analysis_report
+from analytics.bsi import calculate_bsi
+from config.styles import CSS_STYLES, APP_TITLE, APP_SUBTITLE, COLOR_SCHEME
+from utils.logging_config import logger
 
 
 def main():

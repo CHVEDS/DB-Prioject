@@ -9,7 +9,7 @@ import logging
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Tuple, Optional
-from config import RATIOS_THRESHOLDS
+from config.thresholds import RATIO_THRESHOLDS
 
 
 logger = logging.getLogger(__name__)
@@ -94,7 +94,7 @@ class BankingRatiosCalculator:
             return 0.0, "Cannot calculate: Total assets is zero"
         
         ratio = self.equity / self.total_assets
-        min_thr, max_thr = RATIOS_THRESHOLDS['capital_adequacy']
+        min_thr, max_thr = RATIO_THRESHOLDS['capital_adequacy_ratio']
         
         if ratio >= max_thr:
             interpretation = f"Excellent: {ratio:.2%} (above target of {max_thr:.2%})"
@@ -118,7 +118,7 @@ class BankingRatiosCalculator:
             return 0.0, "Cannot calculate: Demand deposits is zero"
         
         ratio = self.liquid_assets / self.demand_deposits
-        min_thr, max_thr = RATIOS_THRESHOLDS['instant_liquidity']
+        min_thr, max_thr = RATIO_THRESHOLDS['instant_liquidity_ratio']
         
         if ratio >= max_thr:
             interpretation = f"Strong: {ratio:.2%} (exceeds target of {max_thr:.2%})"
@@ -143,7 +143,7 @@ class BankingRatiosCalculator:
             return 0.0, "Cannot calculate: Short-term liabilities is zero"
         
         ratio = self.liquid_assets / self.short_term_liabilities
-        min_thr, max_thr = RATIOS_THRESHOLDS['current_liquidity']
+        min_thr, max_thr = RATIO_THRESHOLDS['current_liquidity_ratio']
         
         if ratio >= max_thr:
             interpretation = f"Strong: {ratio:.2f} (exceeds target of {max_thr:.2f})"
@@ -167,7 +167,7 @@ class BankingRatiosCalculator:
             return 0.0, "Cannot calculate: Equity is zero"
         
         ratio = self.net_income / self.equity
-        min_thr, max_thr = RATIOS_THRESHOLDS['roe']
+        min_thr, max_thr = RATIO_THRESHOLDS['roe']
         
         if ratio >= max_thr:
             interpretation = f"Excellent: {ratio:.2%} (exceeds target of {max_thr:.2%})"
@@ -191,7 +191,7 @@ class BankingRatiosCalculator:
             return 0.0, "Cannot calculate: Total assets is zero"
         
         ratio = self.net_income / self.total_assets
-        min_thr, max_thr = RATIOS_THRESHOLDS['roa']
+        min_thr, max_thr = RATIO_THRESHOLDS['roa']
         
         if ratio >= max_thr:
             interpretation = f"Excellent: {ratio:.2%} (exceeds target of {max_thr:.2%})"
@@ -216,7 +216,7 @@ class BankingRatiosCalculator:
             return 0.0, "Cannot calculate: Average assets is zero"
         
         ratio = self.net_interest_income / self.average_assets
-        min_thr, max_thr = RATIOS_THRESHOLDS['nim']
+        min_thr, max_thr = RATIO_THRESHOLDS['net_interest_margin']
         
         if ratio >= max_thr:
             interpretation = f"Excellent: {ratio:.2%} (exceeds target of {max_thr:.2%})"
@@ -245,7 +245,7 @@ class BankingRatiosCalculator:
         estimated_npl = self.loans_to_customers * 0.03  # Estimation
         ratio = estimated_npl / self.loans_to_customers
         
-        min_thr, max_thr = RATIOS_THRESHOLDS['problem_loans_ratio']
+        min_thr, max_thr = RATIO_THRESHOLDS['non_performing_loan_ratio']
         
         if ratio <= max_thr:
             interpretation = f"Healthy: {ratio:.2%} (below target of {max_thr:.2%})"
@@ -300,13 +300,13 @@ class BankingRatiosCalculator:
         for ratio_name, (ratio_value, _) in all_ratios.items():
             if ratio_name == 'problem_loans_ratio':
                 # For problem loans, lower is better (reverse scoring)
-                min_thr, max_thr = RATIOS_THRESHOLDS[ratio_name]
+                min_thr, max_thr = RATIO_THRESHOLDS[ratio_name]
                 normalized_scores[ratio_name] = normalize_score(
                     ratio_value, min_thr, max_thr, reverse=True
                 )
             else:
                 # For other ratios, higher is better
-                min_thr, max_thr = RATIOS_THRESHOLDS[ratio_name]
+                min_thr, max_thr = RATIO_THRESHOLDS[ratio_name]
                 normalized_scores[ratio_name] = normalize_score(
                     ratio_value, min_thr, max_thr, reverse=False
                 )

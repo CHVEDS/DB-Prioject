@@ -2,7 +2,7 @@
 
 import pandas as pd
 from typing import Dict, Tuple, Any
-from banking_analysis_platform.config.patterns import RATIO_THRESHOLDS
+from config.patterns import RATIO_THRESHOLDS
 
 
 def normalize_score(value: float, min_thr: float, max_thr: float, reverse: bool = False) -> float:
