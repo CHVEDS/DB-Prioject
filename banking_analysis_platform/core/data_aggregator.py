@@ -76,7 +76,58 @@ def aggregate_financial_data(tables: List[pd.DataFrame]) -> Dict[str, float]:
         'interbank_liabilities_to_interest_bearing_liabilities': 0
     }
 
-    # Financial patterns from the original redyxlsx.py
+    # Additional important financial indicators patterns
+    additional_patterns = {
+        'total_deposits': [r'всего депозиты', r'депозиты всего', r'итого депозиты'],
+        'total_loans': [r'всего кредиты', r'итого по кредитам', r'ссуды всего'],
+        'gross_loan_portfolio': [r'валюта кредитного портфеля', r'общий кредитный портфель'],
+        'loan_loss_reserves': [r'резервы под возможные потери', r'резервы на возможные потери'],
+        'net_loan_portfolio': [r'чистый кредитный портфель', r'портфель ссуд после резервов'],
+        'commission_income': [r'комиссионные доходы', r'доходы по комиссии'],
+        'fee_income': [r'платежи и сборы', r'доходы от операций по платежам'],
+        'net_worth': [r'чистая стоимость', r'собственный капитал'],
+        'tangible_assets': [r'материальные активы', r'осязаемые активы'],
+        'intangible_assets': [r'нематериальные активы', r'неосязаемые активы'],
+        'fixed_assets': [r'основные средства', r'фиксированные активы'],
+        'current_assets': [r'оборотные активы', r'текущие активы'],
+        'current_liabilities': [r'текущие обязательства', r'краткосрочные обязательства'],
+        'long_term_debt': [r'долгосрочный долг', r'долгосрочные обязательства'],
+        'shareholders_equity': [r'акционерный капитал', r'собственный капитал акционеров'],
+        'retained_earnings': [r'нераспределенная прибыль', r'непокрытый убыток'],
+        'treasury_stock': [r'казначейские акции', r'акции общества'],
+        'common_stock': [r'обыкновенные акции', r'акции обычные'],
+        'preferred_stock': [r'привилегированные акции', r'акции привилегированные'],
+        'earnings_per_share': [r'прибыль на акцию', r'доход на акцию'],
+        'dividend_per_share': [r'дивиденд на акцию', r'выплата дивидендов на акцию'],
+        'book_value_per_share': [r'балансовая стоимость акции', r'стоимость акции по балансу'],
+        'price_to_earnings_ratio': [r'цена к прибыли', r'соотношение цена/прибыль'],
+        'price_to_book_ratio': [r'цена к стоимости', r'соотношение цена/стоимость'],
+        'debt_to_equity_ratio': [r'соотношение долг/капитал', r'коэффициент задолженности'],
+        'debt_ratio': [r'коэффициент задолженности', r'доля долга'],
+        'equity_ratio': [r'коэффициент собственности', r'доля капитала'],
+        'asset_turnover': [r'оборачиваемость активов', r'эффективность активов'],
+        'inventory_turnover': [r'оборачиваемость запасов', r'эффективность запасов'],
+        'receivables_turnover': [r'оборачиваемость дебиторской задолженности'],
+        'payables_turnover': [r'оборачиваемость кредиторской задолженности'],
+        'working_capital': [r'оборотный капитал', r'рабочий капитал'],
+        'quick_ratio': [r'быстрый коэффициент', r'кислотный тест'],
+        'current_ratio': [r'текущий коэффициент', r'коэффициент покрытия'],
+        'times_interest_earned': [r'покрытие процентных платежей', r'кратность процентного покрытия'],
+        'cash_ratio': [r'коэффициент денежных средств', r'ликвидность по наличности'],
+        'gross_profit_margin': [r'валовая прибыль', r'валовой доход'],
+        'operating_profit_margin': [r'операционная прибыль', r'операционный доход'],
+        'net_profit_margin': [r'чистая прибыль', r'чистый доход'],
+        'gross_margin': [r'валовая маржа', r'валовый доход'],
+        'operating_margin': [r'операционная маржа', r'операционный доход'],
+        'ebitda': [r'ebitda', r'прибыль до вычета процентов налога и амортизации'],
+        'ebit': [r'ebit', r'прибыль до вычета процентов и налогов'],
+        'tax_expense': [r'налог на прибыль', r'расходы по налогу'],
+        'research_development': [r'исследования и разработки', r'r&d'],
+        'selling_general_administrative': [r'коммерческие и административные расходы'],
+        'depreciation_amortization': [r'амортизация и износ', r'амортизационные отчисления']
+    }
+
+    # Update financial patterns with additional ones
     financial_patterns = {
         'total_assets': [r'итого активов', r'валюта баланса', r'активы всего', r'^активы$', r'активы.*конец'],
         'loans_to_customers': [r'кредиты и авансы клиентам', r'кредитный портфель', r'ссуды клиентам',
@@ -144,6 +195,9 @@ def aggregate_financial_data(tables: List[pd.DataFrame]) -> Dict[str, float]:
         'deposits_to_interest_bearing_liabilities': [r'соотношение депозитов к процентным обязательствам', r'депозиты.*процентные обязательства'],
         'interbank_liabilities_to_interest_bearing_liabilities': [r'соотношение межбанковских обязательств к процентным обязательствам', r'межбанк.*процентные обязательства']
     }
+
+    # Add additional patterns to the main patterns
+    financial_patterns.update(additional_patterns)
 
     # Unit conversion patterns
     unit_patterns = [

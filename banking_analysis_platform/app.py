@@ -18,6 +18,13 @@ from config.styles import CSS_STYLES, APP_TITLE, APP_SUBTITLE, COLOR_SCHEME
 from utils.logging_config import logger
 
 
+def calculate_bsi_separately(financial_data: Dict, ratios: Dict) -> tuple:
+    """
+    Wrapper function to calculate BSI separately since it was removed from calculator
+    """
+    return calculate_bsi(financial_data, ratios)
+
+
 def main():
     """Main function to run the Streamlit application."""
     st.set_page_config(
@@ -37,6 +44,10 @@ def main():
     if 'session_data' not in st.session_state:
         st.session_state.session_data = {}
     
+    # Initialize processing state
+    if 'processing_complete' not in st.session_state:
+        st.session_state.processing_complete = False
+    
     # File uploader for multiple PDFs
     uploaded_files = st.file_uploader(
         "Загрузите годовые отчёты банков (PDF)",
@@ -45,72 +56,86 @@ def main():
         help="Поддерживается загрузка нескольких файлов одновременно"
     )
     
-    if uploaded_files:
-        # Process each uploaded file
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        for idx, file in enumerate(uploaded_files):
-            status_text.text(f"Обработка файла {idx + 1} из {len(uploaded_files)}: {file.name}")
+    # Process button
+    if uploaded_files and not st.session_state.processing_complete:
+        if st.button("🚀 Начать анализ", type="primary"):
+            st.session_state.processing_complete = True
+            # Process each uploaded file
+            progress_bar = st.progress(0)
+            status_text = st.empty()
             
-            # Save uploaded file temporarily
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                tmp_file.write(file.getvalue())
-                temp_path = tmp_file.name
+            for idx, file in enumerate(uploaded_files):
+                status_text.text(f"Обработка файла {idx + 1} из {len(uploaded_files)}: {file.name}")
+                
+                # Save uploaded file temporarily
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                    tmp_file.write(file.getvalue())
+                    temp_path = tmp_file.name
+                
+                try:
+                    # 1. Extract tables from PDF
+                    tables = extract_tables_from_pdf(Path(temp_path))
+                    
+                    if not tables:
+                        st.error(f"Не удалось извлечь финансовые данные из {file.name}. "
+                                "Проверьте, что это годовой отчет банка в формате PDF.")
+                        continue
+                    
+                    # 2. Extract metadata (bank name, year) from content
+                    # Extract raw text from PDF to improve metadata extraction
+                    import pdfplumber
+                    text_content = ""
+                    with pdfplumber.open(temp_path) as pdf:
+                        for page in pdf.pages:
+                            text = page.extract_text()
+                            if text:
+                                text_content += text
+
+                    metadata = extract_metadata(tables, text_content)
+                    bank_name = metadata['bank_name']  # REAL name from PDF
+                    report_year = metadata['year']
+                    
+                    # 3. Aggregate financial data
+                    financial_data = aggregate_financial_data(tables)
+                    financial_data['bank_name'] = bank_name
+                    financial_data['year'] = report_year
+                    
+                    # 4. Calculate ratios
+                    calculator = BankingRatiosCalculator(financial_data)
+                    ratios = calculator.calculate_all_ratios()
+                    
+                    # 5. Calculate BSI
+                    bsi = calculate_bsi(financial_data, ratios)
+                    
+                    # 6. Store in session state
+                    st.session_state.session_data[bank_name] = {
+                        'financial_data': financial_data,
+                        'ratios': ratios,
+                        'bsi': bsi,
+                        'tables': tables,
+                        'year': report_year
+                    }
+                    
+                except Exception as e:
+                    st.error(f"Ошибка обработки файла {file.name}: {str(e)}")
+                    logger.error(f"Error processing file {file.name}: {str(e)}")
+                finally:
+                    # Clean up temporary file
+                    Path(temp_path).unlink(missing_ok=True)
+                
+                progress_bar.progress((idx + 1) / len(uploaded_files))
             
-            try:
-                # 1. Extract tables from PDF
-                tables = extract_tables_from_pdf(Path(temp_path))
-                
-                if not tables:
-                    st.error(f"Не удалось извлечь финансовые данные из {file.name}. "
-                            "Проверьте, что это годовой отчет банка в формате PDF.")
-                    continue
-                
-                # 2. Extract metadata (bank name, year) from content
-                # For now, we'll use a placeholder approach, later we can enhance with actual text extraction
-                metadata = extract_metadata(tables, "")
-                bank_name = metadata['bank_name']  # REAL name from PDF
-                report_year = metadata['year']
-                
-                # 3. Aggregate financial data
-                financial_data = aggregate_financial_data(tables)
-                financial_data['bank_name'] = bank_name
-                financial_data['year'] = report_year
-                
-                # 4. Calculate ratios
-                calculator = BankingRatiosCalculator(financial_data)
-                ratios = calculator.calculate_all_ratios()
-                
-                # 5. Calculate BSI
-                bsi = calculate_bsi(financial_data, ratios)
-                
-                # 6. Store in session state
-                st.session_state.session_data[bank_name] = {
-                    'financial_data': financial_data,
-                    'ratios': ratios,
-                    'bsi': bsi,
-                    'tables': tables,
-                    'year': report_year
-                }
-                
-            except Exception as e:
-                st.error(f"Ошибка обработки файла {file.name}: {str(e)}")
-                logger.error(f"Error processing file {file.name}: {str(e)}")
-            finally:
-                # Clean up temporary file
-                Path(temp_path).unlink(missing_ok=True)
-            
-            progress_bar.progress((idx + 1) / len(uploaded_files))
-        
-        status_text.text("✅ Обработка завершена!")
+            status_text.text("✅ Обработка завершена!")
     
     # Display results if data exists
     if st.session_state.session_data:
         display_results()
     
-    # Show finish button
-    show_finish_section()
+    # Show finish button only if processing is complete
+    if st.session_state.processing_complete:
+        show_finish_section()
+    elif uploaded_files:
+        st.info("Нажмите кнопку '🚀 Начать анализ' для обработки загруженных файлов")
 
 
 def display_results():
