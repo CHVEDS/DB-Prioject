@@ -275,60 +275,7 @@ class BankingRatiosCalculator:
         
         return ratios
 
-    def calculate_bsi(self) -> Tuple[float, str]:
-        """
-        Calculate Bank Stability Index (BSI) as weighted average of normalized ratios.
-        
-        Returns:
-            Tuple of (bsi_score, interpretation)
-        """
-        all_ratios = self.calculate_all_ratios()
-        
-        # Weights for different ratios (subject to adjustment based on importance)
-        weights = {
-            'capital_adequacy': 0.20,      # Capital strength
-            'instant_liquidity': 0.15,     # Immediate liquidity
-            'current_liquidity': 0.15,     # Overall liquidity
-            'roe': 0.15,                   # Profitability
-            'roa': 0.15,                   # Asset efficiency
-            'nim': 0.10,                   # Interest margin
-            'problem_loans_ratio': 0.10    # Asset quality (reversed scale)
-        }
-        
-        # Normalize each ratio to 0-1 scale
-        normalized_scores = {}
-        for ratio_name, (ratio_value, _) in all_ratios.items():
-            if ratio_name == 'problem_loans_ratio':
-                # For problem loans, lower is better (reverse scoring)
-                min_thr, max_thr = RATIO_THRESHOLDS[ratio_name]
-                normalized_scores[ratio_name] = normalize_score(
-                    ratio_value, min_thr, max_thr, reverse=True
-                )
-            else:
-                # For other ratios, higher is better
-                min_thr, max_thr = RATIO_THRESHOLDS[ratio_name]
-                normalized_scores[ratio_name] = normalize_score(
-                    ratio_value, min_thr, max_thr, reverse=False
-                )
-        
-        # Calculate weighted sum
-        bsi = 0.0
-        for ratio_name, weight in weights.items():
-            bsi += normalized_scores[ratio_name] * weight
-        
-        # Interpret BSI
-        if bsi >= 0.8:
-            interpretation = f"Excellent stability: {bsi:.2f}/1.00"
-        elif bsi >= 0.6:
-            interpretation = f"Good stability: {bsi:.2f}/1.00"
-        elif bsi >= 0.4:
-            interpretation = f"Adequate stability: {bsi:.2f}/1.00"
-        elif bsi >= 0.2:
-            interpretation = f"Concerning stability: {bsi:.2f}/1.00"
-        else:
-            interpretation = f"Critical stability: {bsi:.2f}/1.00"
-        
-        return bsi, interpretation
+    # REMOVED calculate_bsi method as per requirements - BSI is not needed
 
 
 def generate_analysis_report(calculator: BankingRatiosCalculator) -> str:
@@ -374,29 +321,42 @@ def generate_analysis_report(calculator: BankingRatiosCalculator) -> str:
         desc = ratio_descriptions.get(ratio_key, ratio_key.replace('_', ' ').title())
         report.append(f"{desc}: {interpretation}")
     
-    # Bank Stability Index
-    bsi_score, bsi_interpretation = calculator.calculate_bsi()
-    report.append(f"\nИНДЕКС БАНКОВСКОЙ УСТОЙЧИВОСТИ (BSI): {bsi_interpretation}")
-    
     # Final Assessment
     report.append("\nОБЩАЯ ОЦЕНКА:")
     report.append("-" * 15)
     
-    if bsi_score >= 0.8:
+    # Since BSI is removed, we'll provide a general assessment based on key ratios
+    roe_value = all_ratios.get('roe', (0, ''))[0]
+    roa_value = all_ratios.get('roa', (0, ''))[0]
+    capital_adequacy_value = all_ratios.get('capital_adequacy', (0, ''))[0]
+    problem_loans_value = all_ratios.get('problem_loans_ratio', (0, ''))[0]
+    
+    good_indicators = 0
+    total_indicators = 4
+    
+    if roe_value >= 0.10:
+        good_indicators += 1
+    if roa_value >= 0.01:
+        good_indicators += 1
+    if capital_adequacy_value >= 0.08:
+        good_indicators += 1
+    if problem_loans_value <= 0.05:
+        good_indicators += 1
+    
+    stability_percentage = good_indicators / total_indicators
+    
+    if stability_percentage >= 0.75:
         report.append("Банк демонстрирует ОТЛИЧНУЮ финансовую устойчивость.")
         report.append("Рекомендации: Продолжать текущую стратегию развития.")
-    elif bsi_score >= 0.6:
+    elif stability_percentage >= 0.5:
         report.append("Банк имеет ХОРОШУЮ финансовую устойчивость.")
         report.append("Рекомендации: Мониторить ключевые показатели.")
-    elif bsi_score >= 0.4:
+    elif stability_percentage >= 0.25:
         report.append("Банк имеет УДОВЛЕТВОРИТЕЛЬНУЮ финансовую устойчивость.")
         report.append("Рекомендации: Рассмотреть меры по улучшению показателей.")
-    elif bsi_score >= 0.2:
+    else:
         report.append("Банк имеет ПОНЖЕННУЮ финансовую устойчивость.")
         report.append("Рекомендации: Необходимы срочные меры по улучшению показателей.")
-    else:
-        report.append("БАНК НАХОДИТСЯ В КРИТИЧЕСКОМ ФИНАНСОВОМ СОСТОЯНИИ.")
-        report.append("Рекомендации: Требуется немедленное вмешательство для стабилизации.")
     
     report.append("\nДата анализа: " + str(pd.Timestamp.now().date()))
     report.append("=" * 60)
